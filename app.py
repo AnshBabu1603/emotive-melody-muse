@@ -4,12 +4,11 @@ import numpy as np
 import base64
 from deepface import DeepFace
 import os
+import psutil  # To track memory usage
 from flask_cors import CORS
 
 app = Flask(__name__)
-
-# CORS setup
-CORS(app, origins=["https://emotive-melody-muse-611b98d7.vercel.app"], supports_credentials=True)
+CORS(app, resources={r"/*": {"origins": ["https://emotive-melody-muse-611b98d7.vercel.app"]}})
 
 @app.route('/')
 def home():
@@ -26,14 +25,29 @@ def predict():
     img_bytes = image_file.read()
     img_array = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
+
+    # Resize image to reduce memory usage
+    img = cv2.resize(img, (640, 480))  # Resize to a smaller size
+
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
     # Get additional inputs
     language = request.form.get('language', 'English')
     singer = request.form.get('singer', '')
 
+    # Log memory usage before processing
+    process = psutil.Process(os.getpid())
+    memory_before = process.memory_info().rss / 1024 / 1024  # Memory in MB
+    print(f"Memory before processing: {memory_before} MB")
+
     try:
-        result = DeepFace.analyze(img_rgb, actions=['emotion'], enforce_detection=False)
+        # Emotion analysis with DeepFace
+        result = DeepFace.analyze(
+            img_rgb,
+            actions=['emotion'],
+            enforce_detection=False,
+            detector_backend='opencv'  # Use OpenCV as the detector backend (lighter on memory)
+        )
 
         if isinstance(result, list):
             result = result[0]
@@ -51,6 +65,10 @@ def predict():
         query = query.replace(' ', '+')
 
         youtube_url = f"https://www.youtube.com/results?search_query={query}"
+
+        # Log memory usage after processing
+        memory_after = process.memory_info().rss / 1024 / 1024  # Memory in MB
+        print(f"Memory after processing: {memory_after} MB")
 
         return jsonify({
             'emotion': emotion,
