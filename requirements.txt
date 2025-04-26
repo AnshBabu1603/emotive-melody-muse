@@ -4,3 +4,4 @@ opencv-python
 numpy
 flask-cors
 gunicorn
+tf-keras
