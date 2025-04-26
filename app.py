@@ -7,7 +7,7 @@ import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app)  # This allows requests from your React frontend
+CORS(app, resources={r"/*": {"origins": ["https://emotive-melody-muse-611b98d7.vercel.app"]}})
 
 @app.route('/')
 def home():
