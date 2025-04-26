@@ -7,7 +7,9 @@ import os
 from flask_cors import CORS
 
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": ["https://emotive-melody-muse-611b98d7.vercel.app"]}})
+
+# CORS setup
+CORS(app, origins=["https://emotive-melody-muse-611b98d7.vercel.app"], supports_credentials=True)
 
 @app.route('/')
 def home():
@@ -64,4 +66,3 @@ def predict():
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
-
