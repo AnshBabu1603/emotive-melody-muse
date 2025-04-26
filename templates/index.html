@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emotion-Based Music Recommender</title>
+</head>
+<body>
+  <h1>Emotion-Based Music Recommender</h1>
+
+  <!-- Camera feed -->
+  <video id="webcam" width="640" height="480" autoplay></video><br><br>
+
+  <!-- Buttons to start and stop the camera -->
+  <button id="start-camera-btn">Start Camera</button>
+  <button id="stop-camera-btn" disabled>Stop Camera</button><br><br>
+
+  <!-- Emotion detection form -->
+  <form id="emotion-form" enctype="multipart/form-data">
+    <input type="hidden" name="image" id="image-data">
+
+    <label for="language">Enter Language (e.g., English, Hindi, Spanish):</label>
+    <input type="text" name="language" id="language" required><br><br>
+
+    <label for="singer">Enter Singer Name (Optional):</label>
+    <input type="text" name="singer" id="singer"><br><br>
+
+    <button type="submit">Detect Emotion and Get Playlist</button>
+  </form>
+
+  <div id="result" style="margin-top: 20px; font-size: 20px; font-weight: bold;"></div>
+
+  <script>
+    let videoElement = document.getElementById("webcam");
+    let startButton = document.getElementById("start-camera-btn");
+    let stopButton = document.getElementById("stop-camera-btn");
+    let cameraStream = null;
+
+    // Start camera function
+    startButton.addEventListener("click", function () {
+      const constraints = {
+        video: { facingMode: "user" }
+      };
+
+      navigator.mediaDevices.getUserMedia(constraints)
+        .then(function (stream) {
+          cameraStream = stream;
+          videoElement.srcObject = stream;
+          startButton.disabled = true;
+          stopButton.disabled = false;
+        })
+        .catch(function (error) {
+          console.error("Error accessing webcam: ", error);
+        });
+    });
+
+    // Stop camera function
+    stopButton.addEventListener("click", function () {
+      if (cameraStream) {
+        let tracks = cameraStream.getTracks();
+        tracks.forEach(track => track.stop());
+        videoElement.srcObject = null;
+        startButton.disabled = false;
+        stopButton.disabled = true;
+      }
+    });
+
+    // Capture image and handle emotion detection
+    document.getElementById("emotion-form").addEventListener("submit", async function (event) {
+      event.preventDefault();
+
+      // Capture current frame from video
+      const canvas = document.createElement("canvas");
+      canvas.width = videoElement.videoWidth;
+      canvas.height = videoElement.videoHeight;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+
+      // Convert canvas to base64 image
+      const base64Image = canvas.toDataURL("image/png");
+
+      // Set base64 image to hidden input
+      document.getElementById("image-data").value = base64Image;
+
+      // Create formData manually
+      const formData = new FormData();
+      formData.append("image", base64ToBlob(base64Image), "captured_image.png");
+      formData.append("language", document.getElementById("language").value);
+      formData.append("singer", document.getElementById("singer").value);
+
+      // Send to server
+      const response = await fetch('/predict', {
+        method: 'POST',
+        body: formData
+      });
+
+      const result = await response.json();
+
+      if (result.youtube_url) {
+        // Show detected emotion on page
+        document.getElementById("result").innerText = `Detected Emotion: ${result.emotion} 🎵`;
+
+        // Open YouTube link in new tab
+        window.open(result.youtube_url, "_blank");
+      } else {
+        document.getElementById("result").innerText = "Could not detect emotion. Try again!";
+      }
+    });
+
+    // Helper to convert base64 to blob
+    function base64ToBlob(base64) {
+      const byteString = atob(base64.split(',')[1]);
+      const mimeString = base64.split(',')[0].split(':')[1].split(';')[0];
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+          ia[i] = byteString.charCodeAt(i);
+      }
+      return new Blob([ab], { type: mimeString });
+    }
+  </script>
+</body>
+</html>
