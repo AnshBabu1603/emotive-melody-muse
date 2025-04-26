@@ -20,29 +20,30 @@ def predict():
     if not image_file:
         return jsonify({'error': 'No image file provided'}), 400
 
-    # Read image as bytes
     img_bytes = image_file.read()
     img_array = np.frombuffer(img_bytes, np.uint8)
     img = cv2.imdecode(img_array, cv2.IMREAD_COLOR)
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
 
-    # Get additional inputs
     language = request.form.get('language', 'English')
     singer = request.form.get('singer', '')
 
     try:
-        result = DeepFace.analyze(img_rgb, actions=['emotion'], enforce_detection=False)
+        result = DeepFace.analyze(
+            img_rgb,
+            actions=['emotion'],
+            enforce_detection=False,
+            detector_backend='opencv'  # << VERY IMPORTANT
+        )
 
         if isinstance(result, list):
             result = result[0]
 
         emotion = result['dominant_emotion']
 
-        # If emotion is 'neutral', override it with 'sad'
         if emotion == 'neutral':
             emotion = 'sad'
 
-        # Build YouTube URL
         query = f"{language} {emotion} songs"
         if singer:
             query += f" {singer}"
@@ -60,6 +61,7 @@ def predict():
     except Exception as e:
         print("Error during prediction:", e)
         return jsonify({'error': f'Prediction failed: {str(e)}'}), 500
+
 
 
 if __name__ == "__main__":
