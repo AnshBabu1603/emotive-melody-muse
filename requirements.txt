@@ -2,7 +2,7 @@ Flask==2.2.2
 deepface==0.0.75
 opencv-python==4.5.5.64
 numpy==1.24.2
-flask-cors==5.0.1  # Updated version
+flask-cors==5.0.1
 gunicorn==23.0.0
-tf-keras==2.11.0
 psutil==5.9.0
+tensorflow==2.18.0  # Install the latest version of TensorFlow which includes Keras
